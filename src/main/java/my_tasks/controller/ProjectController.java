@@ -42,7 +42,7 @@ public class ProjectController {
         Project project = projectService.getProjectById(id);
         if (project == null) {
             logger.warn("Proyecto con ID {} no encontrado.", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }
         logger.info("Proyecto encontrado: {}", project);
         return ResponseEntity.ok(project);
