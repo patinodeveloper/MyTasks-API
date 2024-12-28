@@ -36,7 +36,7 @@ Sigue estos pasos para instalar y ejecutar la API en tu máquina local:
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/usuario/MyTasks-API.git
+   https://github.com/patinodeveloper/MyTasks-API.git
 
 2. Configura tu base de datos MySQL y asegura que las credenciales estén correctas en el archivo ```application.properties```.
 
