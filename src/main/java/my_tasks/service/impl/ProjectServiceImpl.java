@@ -1,9 +1,13 @@
 package my_tasks.service.impl;
 
+import my_tasks.dto.projects.ProjectDTO;
+import my_tasks.dto.projects.ProjectRequestDTO;
+import my_tasks.helpers.UserHelper;
+import my_tasks.mappers.ProjectMapper;
 import my_tasks.model.Project;
+import my_tasks.model.User;
 import my_tasks.repository.ProjectRepository;
 import my_tasks.service.IProjectService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,29 +16,83 @@ import java.util.List;
 public class ProjectServiceImpl implements IProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectMapper projectMapper;
+    private final UserHelper userHelper;
 
-    @Autowired
-    public ProjectServiceImpl(ProjectRepository projectRepository) {
+    public ProjectServiceImpl(ProjectRepository projectRepository, ProjectMapper projectMapper, UserHelper userHelper) {
         this.projectRepository = projectRepository;
+        this.projectMapper = projectMapper;
+        this.userHelper = userHelper;
     }
 
     @Override
-    public List<Project> getAllProjects() {
-        return projectRepository.findAll();
+    public List<ProjectDTO> getAllProjects() {
+        List<Project> projects = projectRepository.findAll();
+        return projectMapper.toDTOList(projects);
     }
 
     @Override
-    public Project getProjectById(Long idProject) {
-        return projectRepository.findById(idProject).orElse(null);
+    public ProjectDTO getProjectById(Long idProject, User user) {
+        Project project = projectRepository.findById(idProject).orElse(null);
+        if (project == null) return null;
+
+        if (userHelper.isAdmin(user) || project.getUser().getId().equals(user.getId())) {
+            return projectMapper.toDTO(project);
+        }
+
+        return null;
     }
 
     @Override
-    public Project saveProject(Project project) {
-        return projectRepository.save(project);
+    public ProjectDTO saveProject(ProjectRequestDTO projectRequestDTO, User user) {
+        Project project = projectMapper.toEntity(projectRequestDTO);
+        project.setUser(user);
+
+        Project savedProject = projectRepository.save(project);
+        return projectMapper.toDTO(savedProject);
     }
 
     @Override
-    public void deleteProject(Project project) {
-        projectRepository.delete(project);
+    public ProjectDTO updateProject(Long id, ProjectRequestDTO requestDTO, User user) {
+        Project project = projectRepository.findById(id).orElseThrow(
+                () -> new RuntimeException("Proyecto no encontrado"));
+
+        if (!userHelper.isAdmin(user) && !project.getUser().getId().equals(user.getId())) {
+            return null;
+        }
+
+        project.setName(requestDTO.getName());
+        project.setDescription(requestDTO.getDescription());
+        project.setStartTime(requestDTO.getStartTime());
+        project.setEndTime(requestDTO.getEndTime());
+        project.setStatus(requestDTO.getStatus());
+
+        Project updated = projectRepository.save(project);
+        return projectMapper.toDTO(updated);
+    }
+
+    @Override
+    public void deleteProject(Long id, User user) {
+        Project project = projectRepository.findById(id).orElse(null);
+        if (project == null) {
+            throw new RuntimeException("Proyecto no encontrado con el ID: " + id);
+        }
+
+        if (!userHelper.isAdmin(user) && !project.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("No tienes permiso para eliminar este proyecto");
+        }
+
+        projectRepository.deleteById(id);
+    }
+
+    @Override
+    public List<ProjectDTO> findByUserId(Long id) {
+        Project project = projectRepository.findById(id).orElse(null);
+        if (project == null) {
+            throw new RuntimeException("Proyecto no encontrado con el ID: " + id);
+        }
+
+        List<Project> projects = projectRepository.findByUserId(id);
+        return projectMapper.toDTOList(projects);
     }
 }
