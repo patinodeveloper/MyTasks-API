@@ -2,6 +2,8 @@ package my_tasks.service.impl;
 
 import my_tasks.dto.projects.ProjectDTO;
 import my_tasks.dto.projects.ProjectRequestDTO;
+import my_tasks.exceptions.ForbbidenException;
+import my_tasks.exceptions.NotFoundException;
 import my_tasks.helpers.UserHelper;
 import my_tasks.mappers.ProjectMapper;
 import my_tasks.model.Project;
@@ -40,7 +42,7 @@ public class ProjectServiceImpl implements IProjectService {
             return projectMapper.toDTO(project);
         }
 
-        return null;
+        throw new ForbbidenException("No tienes permiso para acceder a este Proyecto");
     }
 
     @Override
@@ -55,10 +57,10 @@ public class ProjectServiceImpl implements IProjectService {
     @Override
     public ProjectDTO updateProject(Long id, ProjectRequestDTO requestDTO, User user) {
         Project project = projectRepository.findById(id).orElseThrow(
-                () -> new RuntimeException("Proyecto no encontrado"));
+                () -> new NotFoundException("Proyecto no encontrado"));
 
         if (!userHelper.isAdmin(user) && !project.getUser().getId().equals(user.getId())) {
-            return null;
+            throw new ForbbidenException("No tienes permiso para actualizar este Proyecto");
         }
 
         project.setName(requestDTO.getName());
@@ -73,13 +75,11 @@ public class ProjectServiceImpl implements IProjectService {
 
     @Override
     public void deleteProject(Long id, User user) {
-        Project project = projectRepository.findById(id).orElse(null);
-        if (project == null) {
-            throw new RuntimeException("Proyecto no encontrado con el ID: " + id);
-        }
+        Project project = projectRepository.findById(id).orElseThrow(() ->
+                new NotFoundException("Proyecto no encontrado con el ID: " + id));
 
         if (!userHelper.isAdmin(user) && !project.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("No tienes permiso para eliminar este proyecto");
+            throw new ForbbidenException("No tienes permiso para acceder a este Proyecto");
         }
 
         projectRepository.deleteById(id);
@@ -87,11 +87,6 @@ public class ProjectServiceImpl implements IProjectService {
 
     @Override
     public List<ProjectDTO> findByUserId(Long id) {
-        Project project = projectRepository.findById(id).orElse(null);
-        if (project == null) {
-            throw new RuntimeException("Proyecto no encontrado con el ID: " + id);
-        }
-
         List<Project> projects = projectRepository.findByUserId(id);
         return projectMapper.toDTOList(projects);
     }

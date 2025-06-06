@@ -3,6 +3,7 @@ package my_tasks.controller;
 import my_tasks.dto.tasks.TaskDTO;
 import my_tasks.dto.tasks.TaskRequestDTO;
 import my_tasks.model.User;
+import my_tasks.responses.ApiResponse;
 import my_tasks.service.ITaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,69 +26,72 @@ public class TaskController {
 
     private final ITaskService taskService;
 
-    @Autowired
     public TaskController(ITaskService taskService) {
         this.taskService = taskService;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
+    public ResponseEntity<ApiResponse<List<TaskDTO>>> getAllTasks() {
         List<TaskDTO> tasks = taskService.getAllTasks();
+
         if (tasks.isEmpty()) {
             logger.warn("No se encontraron tareas en el sistema");
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            return ResponseEntity.ok(ApiResponse.successMessage("No se encontraron tareas en el sistema"));
         }
+
         tasks.forEach(task -> logger.info(task.toString()));
-        return ResponseEntity.ok(tasks);
+        return ResponseEntity.ok(ApiResponse.success(tasks));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<TaskDTO>> getTaskById(@PathVariable Long id, @AuthenticationPrincipal User user) {
         TaskDTO task = taskService.getTaskById(id, user);
         if (task == null) {
-            logger.warn("No se encontro ninguna Tarea con el ID: {} en el sistema", id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+            logger.warn("No se encontró ninguna Tarea con el ID: {} en el sistema", id);
+            return ResponseEntity.ok(ApiResponse.successMessage("La tarea no existe"));
         }
         logger.info("Tarea encontrada: {}", task);
-        return ResponseEntity.ok(task);
+        return ResponseEntity.ok(ApiResponse.success(task));
     }
 
     @PostMapping
-    public ResponseEntity<TaskDTO> postTask(@RequestBody TaskRequestDTO task, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<TaskDTO>> postTask(@RequestBody TaskRequestDTO task,
+                                                         @AuthenticationPrincipal User user) {
         logger.info("Tarea a agregar: {}", task);
         TaskDTO savedTask = taskService.saveTask(task, user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedTask);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(savedTask));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO receivedTask,
-                                              @AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<TaskDTO>> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO receivedTask,
+                                                           @AuthenticationPrincipal User user) {
         TaskDTO updated = taskService.updateTask(id, receivedTask, user);
+
         if (updated == null) {
             logger.warn("Error al intentar actualizar la tarea con ID: {}", id);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(ApiResponse.success(updated));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteTask(@PathVariable Long id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<String>> deleteTask(@PathVariable Long id, @AuthenticationPrincipal User user) {
         taskService.deleteTask(id, user);
         logger.info("Cita con ID: {} eliminada exitosamente.", id);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.successMessage("Tarea eliminada exitosamente"));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<TaskDTO>> getTasksByUser(@AuthenticationPrincipal User user) {
+    public ResponseEntity<ApiResponse<List<TaskDTO>>> getTasksByUser(@AuthenticationPrincipal User user) {
         List<TaskDTO> tasks = taskService.findByProjectUserId(user.getId());
         if (tasks.isEmpty()) {
             logger.warn("No se encontraron tareas para el usuario en el sistema");
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }
         tasks.forEach(task -> logger.info(task.toString()));
-        return ResponseEntity.ok(tasks);
+        return ResponseEntity.ok(ApiResponse.success(tasks));
     }
 }

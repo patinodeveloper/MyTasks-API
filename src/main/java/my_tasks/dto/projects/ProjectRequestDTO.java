@@ -16,18 +16,18 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProjectRequestDTO {
-    @NotBlank(message = "El nombre del proyecto es obligatorio")
+    @NotBlank(message = "El nombre del proyecto es requerido")
     @Size(min = 3, max = 50, message = "El nombre del proyecto debe tener entre 3 y 100 caracteres")
     private String name;
 
     private String description;
 
-    @NotNull
+    @NotNull(message = "La fecha de inicio es requerida")
     private LocalDate startTime;
 
-    @NotNull
+    @NotNull(message = "La fecha de finalización es requerida")
     private LocalDate endTime;
 
-    @NotNull(message = "El status no puede ser null")
+    @NotNull(message = "El status es requerido")
     private ProjectStatus status;
 }

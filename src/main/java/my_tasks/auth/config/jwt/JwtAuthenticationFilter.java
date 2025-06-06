@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import my_tasks.auth.service.JwtService;
+import my_tasks.exceptions.ForbbidenException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (!jwtService.isTokenValid(token, userDetails)) {
-                    throw new RuntimeException("Token JWT inválido o expirado.");
+                    throw new ForbbidenException("Token JWT inválido o expirado.");
                 }
 
                 UsernamePasswordAuthenticationToken authToken =
@@ -52,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception ex) {
-            throw new RuntimeException("Error al validar el token JWT: " + ex.getMessage());
+            throw new ForbbidenException("Error al validar el token JWT: " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

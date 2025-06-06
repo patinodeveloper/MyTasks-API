@@ -2,6 +2,8 @@ package my_tasks.service.impl;
 
 import my_tasks.dto.tasks.TaskDTO;
 import my_tasks.dto.tasks.TaskRequestDTO;
+import my_tasks.exceptions.ForbbidenException;
+import my_tasks.exceptions.NotFoundException;
 import my_tasks.helpers.UserHelper;
 import my_tasks.mappers.TaskMapper;
 import my_tasks.model.Project;
@@ -45,18 +47,18 @@ public class TaskServiceImpl implements ITaskService {
             return taskMapper.toDTO(task);
         }
 
-        return null;
+        throw new ForbbidenException("No tienes permiso para acceder a esta Tarea");
     }
 
     @Override
     public TaskDTO saveTask(TaskRequestDTO requestDTO, User user) {
         // Busca el proyecto por ID
         Project project = projectRepository.findById(requestDTO.getProject().getId())
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Proyecto no encontrado"));
 
         // Verifica que el proyecto le pertenece al usuario autenticado
         if (!project.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("No tienes permiso para agregar tareas a este proyecto");
+            throw new ForbbidenException("No tienes permiso para agregar tareas a este proyecto");
         }
 
         Task task = taskMapper.toEntity(requestDTO);
@@ -67,10 +69,10 @@ public class TaskServiceImpl implements ITaskService {
     @Override
     public TaskDTO updateTask(Long id, TaskRequestDTO requestDTO, User user) {
         Task task = taskRepository.findById(id).orElseThrow(
-                () -> new RuntimeException("Tarea no encontrada"));
+                () -> new NotFoundException("Tarea no encontrada"));
 
         if (!userHelper.isAdmin(user) && !task.getProject().getUser().getId().equals(user.getId())) {
-            return null;
+            throw new ForbbidenException("No tienes permiso para actualizar esta Tarea");
         }
 
         task.setName(requestDTO.getName());
@@ -87,11 +89,11 @@ public class TaskServiceImpl implements ITaskService {
 
     @Override
     public void deleteTask(Long id, User user) {
-        Task task = taskRepository.findById(id).orElse(null);
-        if (task == null) return;
+        Task task = taskRepository.findById(id).orElseThrow(() ->
+                new NotFoundException("Tarea no encontrada con el ID: " + id));
 
         if (!userHelper.isAdmin(user) || !task.getProject().getUser().getId().equals(user.getId())) {
-            return;
+            throw new ForbbidenException("No tienes permiso para eliminar a esta Tarea");
         }
 
         taskRepository.deleteById(id);
